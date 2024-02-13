@@ -1,0 +1,231 @@
+---
+title: "Time Series and Decompostion Analysis"
+subtitle: "Using National Hobby Sales"  
+author: "Joshua Grant"
+institute: <img src="images/RMarkdown-logo.png" width=90 height=100>
+date: '`r Sys.Date()`'
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    nature:
+      slideNumberFormat: "%current%"
+      highlightStyle: github
+      highlightLines: true
+      ratio: 16:9
+      countIncrementalSlides: true
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+  fig.width=9, fig.height=3.5, fig.retina=3,
+  out.width = "100%",
+  cache = FALSE,
+  echo = TRUE,
+  message = FALSE, 
+  warning = FALSE,
+  hiline = TRUE
+)
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+if (!require("knitr")) {
+   install.packages("knitr")
+   library(knitr)
+}
+if (!require("leaflet")) {
+   install.packages("leaflet")
+   library(leaflet)
+}
+if (!require("EnvStats")) {
+   install.packages("EnvStats")
+   library(EnvStats)
+}
+if (!require("MASS")) {
+   install.packages("MASS")
+   library(MASS)
+}
+if (!require("phytools")) {
+   install.packages("phytools")
+   library(phytools)
+}
+if (!require("tidyverse")) {
+   install.packages("tidyverse")
+   library(tidyverse)
+}
+if (!require("nleqslv")) {
+   install.packages("nleqslv")
+   library(nleqslv)
+}
+if (!require("pander")) {
+   install.packages("pander")
+   library(pander)
+}
+if (!require("psych")) {   
+  install.packages("psych")
+   library(psych)
+}
+if (!require("car")) {
+   install.packages("car")
+   library(car)
+}
+if (!require("lubridate")) {
+   install.packages("lubridate")
+   library(lubridate)
+}
+if (!require("ggplot2")) {
+   install.packages("ggplot2")
+   library(ggplot2)
+}
+if (!require("simputation")) {
+   install.packages("simputation")
+   library(simputation)
+}
+if (!require("modelr")) {
+   install.packages("modelr")
+   library(modelr)
+}
+if (!require("MASS")) {
+   install.packages("MASS")
+   library(mass)
+}
+if (!require("pROC")) {
+   install.packages("pROC")
+   library(pROC)
+}
+if (!require("readxl")) {
+   install.packages("readxl")
+   library(readxl)
+}
+if (!require("forecast")) {
+   install.packages("forecast")
+   library(readxl)
+}
+library(xaringanthemer)
+style_duo_accent(
+  primary_color = "#1381B0",
+  secondary_color = "grey",
+  inverse_header_color = "#FFFFFF"
+)
+```
+
+class:inverse, top
+
+<h1 align="center"> Table of Contents</h1>
+<BR>
+
+.pull-left[
+- Overview of data set
+- Time series graph
+- STL decomposition
+- Forecast results for different training sample sizes
+]
+
+
+
+
+---
+
+### Data Set
+
+- Data from the United States Census Bureau
+- Not seasonally adjusted
+- "Hobby" includes books, sporting equipment, musical instruments, and other recreational sales
+- Data from 2008 to 2023
+
+
+
+### Examples
+
+
+<h1 align="center"> <img src="images/book.jpg" width=250 height=200> <img src="images/Music.jpg" width=250 height=200> <img src="images/sports.jpg" width=250 height=200><h1>
+
+
+
+---
+class: inverse3 center middle 
+
+# Hobby Sales between Jan 2008 and Sep 2023
+
+```{r  echo=FALSE}
+
+sales <- read.csv(file="https://raw.githubusercontent.com/JoshuaGrant24/Monthly-Sales/main/SeriesReport-202311131617.csv")
+sales <- head(sales,-3)
+sales <- tail(sales,-192)
+sales.ts = ts(sales[,2], frequency = 12, start = c(2008, 1))
+plot(sales.ts, ylab="Sales (Millions USD)", xlab="Year")
+```
+
+
+
+---
+class: inverse3 center middle 
+
+# STL Decomposition of Additive Time Series
+
+```{r  echo=FALSE}
+
+stl.decomp=stl(sales.ts, s.window = 12)
+plot(stl.decomp)
+```
+
+
+---
+class: inverse3 center middle 
+
+# Error comparison between forecast results with different sample sizes
+
+```{r  echo=FALSE}
+ini.data = sales[,2]
+n0 = length(ini.data)
+##
+train.data01 = sales[1:(n0-7), 2]
+train.data02 = sales[45:(n0-7), 2]
+train.data03 = sales[90:(n0-7), 2]
+train.data04 = sales[135:(n0-7), 2]
+## last 7 observations
+test.data = sales[(n0-6):n0,2]
+##
+train01.ts = ts(train.data01, frequency = 12, start = c(2008, 1))
+train02.ts = ts(train.data02, frequency = 12, start = c(2011, 1))
+train03.ts = ts(train.data03, frequency = 12, start = c(2014, 1))
+train04.ts = ts(train.data04, frequency = 12, start = c(2016, 1))
+##
+stl01 = stl(train01.ts, s.window = 12)
+stl02 = stl(train02.ts, s.window = 12)
+stl03 = stl(train03.ts, s.window = 12)
+stl04 = stl(train04.ts, s.window = 12)
+## Forecast with decomposing
+fcst01 = forecast(stl01,h=7, method="naive")
+fcst02 = forecast(stl02,h=7, method="naive")
+fcst03 = forecast(stl03,h=7, method="naive")
+fcst04 = forecast(stl04,h=7, method="naive")
+PE01=(test.data-fcst01$mean)/fcst01$mean
+PE02=(test.data-fcst02$mean)/fcst02$mean
+PE03=(test.data-fcst03$mean)/fcst03$mean
+PE04=(test.data-fcst04$mean)/fcst04$mean
+###
+MAPE1 = mean(abs(PE01))
+MAPE2 = mean(abs(PE02))
+MAPE3 = mean(abs(PE03))
+MAPE4 = mean(abs(PE04))
+###
+E1=test.data-fcst01$mean
+E2=test.data-fcst02$mean
+E3=test.data-fcst03$mean
+E4=test.data-fcst04$mean
+##
+MSE1=mean(E1^2)
+MSE2=mean(E2^2)
+MSE3=mean(E3^2)
+MSE4=mean(E4^2)
+###
+MSE=c(MSE1, MSE2, MSE3, MSE4)
+MAPE=c(MAPE1, MAPE2, MAPE3, MAPE4)
+accuracy=cbind(MSE=MSE, MAPE=MAPE)
+row.names(accuracy)=c("n.182", "n.138", "n. 93", "n. 48")
+kable(accuracy, caption="n=93 calculated as best sample size")
+```
+
+
+
