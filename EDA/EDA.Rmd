@@ -1,0 +1,240 @@
+---
+title: "EDA and Applications with the Combined Bank Loan Data:"
+author: "Joshua Grant"
+date: "2024-03-02"
+output:
+  html_document: 
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+    fig_width: 6
+    fig_caption: yes
+    number_sections: no
+    theme: readable
+  word_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    keep_md: yes
+  pdf_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    number_sections: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+```{=html}
+
+<style type="text/css">
+
+/* Cascading Style Sheets (CSS) is a stylesheet language used to describe the presentation of a document written in HTML or XML. it is a simple mechanism for adding style (e.g., fonts, colors, spacing) to Web documents. */
+
+h1.title {  /* Title - font specifications of the report title */
+  font-size: 24px;
+  color: DarkRed;
+  text-align: center;
+  font-family: "Gill Sans", sans-serif;
+}
+h4.author { /* Header 4 - font specifications for authors  */
+  font-size: 20px;
+  font-family: system-ui;
+  color: DarkRed;
+  text-align: center;
+}
+h4.date { /* Header 4 - font specifications for the date  */
+  font-size: 18px;
+  font-family: system-ui;
+  color: DarkBlue;
+  text-align: center;
+}
+h1 { /* Header 1 - font specifications for level 1 section title  */
+    font-size: 22px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: center;
+}
+h2 { /* Header 2 - font specifications for level 2 section title */
+    font-size: 20px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+}
+
+h3 { /* Header 3 - font specifications of level 3 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+}
+
+h4 { /* Header 4 - font specifications of level 4 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: darkred;
+    text-align: left;
+}
+
+body { background-color:white; }
+
+.highlightme { background-color:yellow; }
+
+p { background-color:white; }
+
+</style>
+```
+
+```{r setup, include=FALSE}
+# Detect, install and load packages if needed.
+if (!require("knitr")) {
+   install.packages("knitr")
+   library(knitr)
+}
+if (!require("leaflet")) {
+   install.packages("leaflet")
+   library(leaflet)
+}
+if (!require("EnvStats")) {
+   install.packages("EnvStats")
+   library(EnvStats)
+}
+if (!require("MASS")) {
+   install.packages("MASS")
+   library(MASS)
+}
+if (!require("phytools")) {
+   install.packages("phytools")
+   library(phytools)
+}
+if (!require("tidyverse")) {
+   install.packages("tidyverse")
+   library(tidyverse)
+}
+if (!require("nleqslv")) {
+   install.packages("nleqslv")
+   library(nleqslv)
+}
+if (!require("pander")) {
+   install.packages("pander")
+   library(pander)
+}
+if (!require("psych")) {   
+  install.packages("psych")
+   library(psych)
+}
+if (!require("car")) {
+   install.packages("car")
+   library(car)
+}
+if (!require("lubridate")) {
+   install.packages("lubridate")
+   library(lubridate)
+}
+if (!require("ggplot2")) {
+   install.packages("ggplot2")
+   library(ggplot2)
+}
+if (!require("simputation")) {
+   install.packages("simputation")
+   library(simputation)
+}
+if (!require("modelr")) {
+   install.packages("modelr")
+   library(modelr)
+}
+if (!require("MASS")) {
+   install.packages("MASS")
+   library(mass)
+}
+if (!require("forecast")) {
+   install.packages("forecast")
+   library(forecast)
+}
+
+knitr::opts_chunk$set(echo = FALSE,      
+                      warnings = FALSE, 
+                      number_sections = FALSE, 
+                      messages = FALSE,  
+                      results = TRUE  
+                      )   
+```
+
+
+```{r}
+loan01 = read.csv("https://pengdsci.github.io/datasets/SBAloan/w06-SBAnational01.csv", header = TRUE)[, -1]
+loan02 = read.csv("https://pengdsci.github.io/datasets/SBAloan/w06-SBAnational02.csv", header = TRUE)[, -1]
+loan03 = read.csv("https://pengdsci.github.io/datasets/SBAloan/w06-SBAnational03.csv", header = TRUE)[, -1]
+loan04 = read.csv("https://pengdsci.github.io/datasets/SBAloan/w06-SBAnational04.csv", header = TRUE)[, -1]
+loan05 = read.csv("https://pengdsci.github.io/datasets/SBAloan/w06-SBAnational05.csv", header = TRUE)[, -1]
+loan06 = read.csv("https://pengdsci.github.io/datasets/SBAloan/w06-SBAnational06.csv", header = TRUE)[, -1]
+loan07 = read.csv("https://pengdsci.github.io/datasets/SBAloan/w06-SBAnational07.csv", header = TRUE)[, -1]
+loan08 = read.csv("https://pengdsci.github.io/datasets/SBAloan/w06-SBAnational08.csv", header = TRUE)[, -1]
+loan09 = read.csv("https://pengdsci.github.io/datasets/SBAloan/w06-SBAnational09.csv", header = TRUE)[, -1]
+loan = rbind(loan01, loan02, loan03, loan04, loan05, loan06, loan07, loan08, loan09)
+```
+
+# 1 {-}
+Observations with missing values for the variable MIS_Status are removed from the data set
+
+```{r}
+loan <- subset(loan,MIS_Status!="")
+```
+
+# 2 {-}
+All commas and dollar signs are removed from currency counts
+
+```{r}
+loan$BalanceGross <- gsub("[,$]", "", loan$BalanceGross)
+loan$DisbursementGross <- gsub("[,$]", "", loan$DisbursementGross)
+loan$ChgOffPrinGr <- gsub("[,$]", "", loan$ChgOffPrinGr)
+loan$GrAppv <- gsub("[,$]", "", loan$GrAppv)
+loan$SBA_Appv <- gsub("[,$]", "", loan$SBA_Appv)
+```
+
+# 3 {-}
+
+The Sparse categorical variable "Bank" was reduced by grouping all banks not in the top ten for loan application counts into a single group called "BANK NOT IN TOP 10". In this data set the top 10 banks by loan application count were the 10 that received over 10,000 loan applications. After reduction the categorical variable "Bank" has 11 categories, the 10 top banks and the "BANK NOT IN THE TOP 10" category.
+
+```{r}
+loan <- mutate(loan,Bank = ifelse(Bank =="BANK OF AMERICA NATL ASSOC","BANK OF AMERICA NATL ASSOC",
+                                      ifelse(Bank == "WELLS FARGO BANK NATL ASSOC","WELLS FARGO BANK NATL ASSOC",
+                                             ifelse(Bank == "JPMORGAN CHASE BANK NATL ASSOC","JPMORGAN CHASE BANK NATL ASSOC",
+                                                    ifelse(Bank == "U.S. BANK NATIONAL ASSOCIATION","U.S. BANK NATIONAL ASSOCIATION",
+                                                           ifelse(Bank == "CITIZENS BANK NATL ASSOC","CITIZENS BANK NATL ASSOC",
+                                                                  ifelse(Bank == "PNC BANK, NATIONAL ASSOCIATION","PNC BANK, NATIONAL ASSOCIATION",
+                                                                         ifelse(Bank == "BBCN BANK","BBCN BANK",
+                                                                                ifelse(Bank == "CAPITAL ONE NATL ASSOC","CAPITAL ONE NATL ASSOC",
+                                                                                       ifelse(Bank == "MANUFACTURERS & TRADERS TR CO","MANUFACTURERS & TRADERS TR CO",
+                                                                                              ifelse(Bank == "READYCAP LENDING, LLC","READYCAP LENDING, LLC","BANK NOT IN TOP 10")))))))))))
+count(loan,Bank)
+```
+
+# 4 {-}
+This table gives the default percentages for the 11 categories of banks.
+```{r}
+default_rate <- summarize(group_by(select(loan,Bank,MIS_Status),Bank),Default_Rate = (sum(MIS_Status == "CHGOFF")/n())*100)
+default_rate
+```
+
+# 5 {-}
+In discretizing the numeric variable GrAppv, I broke the loan applications into 5 groups based on density distribution of GRAppv. For the cutoffs between groups i used the 0.2,0.4,0.6, and 0.8 percentage quantiles to separate the observation into 5 groups based on GRAppv. This way there was a roughly equal amount of observations in each of the 5 groups.
+```{r}
+loan$GrAppv = as.numeric(loan$GrAppv)
+loan$SBA_Appv = as.numeric(loan$SBA_Appv)
+quantile(loan$GrAppv,probs = c(0.2,0.4,0.6,0.8))
+loan <- mutate(loan, GRAppv_Dis = ifelse(GrAppv <25200, "Lowest",
+                                         ifelse(GrAppv <57000, "Low",
+                                                ifelse(GrAppv <121200, "Middle",
+                                                       ifelse(GrAppv <287000, "High","Highest")))))
+count(loan,GRAppv_Dis)
+```
+
+# 6 {-}
+
+```{r}
+ggplot(loan, aes(x = SBA_Appv, fill = GRAppv_Dis)) +
+    geom_density(alpha = 0.25) + 
+  xlim(0,800000)+
+scale_y_continuous(labels = scales::comma)
+```
